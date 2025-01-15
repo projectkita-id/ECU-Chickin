@@ -5,6 +5,7 @@
 #include <Adafruit_INA219.h>
 #include <MAX6675_Thermocouple.h>
 #include <Servo.h>
+#include <EEPROM.h>
 
 // ----------------------------- Fuel Sensor ---------------------------------- //
 int TankValue;
@@ -45,6 +46,10 @@ unsigned long rpm = 0;
 void Interrupt() {
   counter++;
 }
+int address = 0;
+int odoH;
+unsigned long startTime = 0;
+bool isTiming = false;
 
 // ------------------------------- MAX_6675 ---------------------------------- //
 #define SCK_PIN 13
@@ -143,6 +148,10 @@ void setup() {
   // ------ RPM ------- //
   pinMode(IR_PIN, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(IR_PIN), Interrupt, FALLING);
+  int lastValue;
+  EEPROM.get(address, lastValue);
+  Serial.print("Nilai terakhir yang disimpan: ");
+  Serial.println(lastValue);
 
   // ----- Fuel ------- //
   pinMode(fuelPin, INPUT_PULLUP);
@@ -177,6 +186,18 @@ void loop() {
     rpm = (counter / 2) * 60;
     counter = 0;
   }
+  if (rpm >= 9000) {
+    if (!isTiming) {
+      startTime = millis();
+      isTiming = true;
+    }
+    unsigned long elapsedTime = (millis() - startTime) / 1000;
+    Serial.print("Waktu berjalan (detik): ");
+    Serial.println(elapsedTime);
+    EEPROM.put(address, elapsedTime);
+  } else {
+    isTiming = false;
+  }
 
   // -- Thermocouple -- //
   const double celsius = thermocouple->readCelsius();
@@ -210,11 +231,14 @@ void loop() {
   node.writeSingleRegister(0x40002, celsius);
   node.writeSingleRegister(0x40003, celsius2);
   node.writeSingleRegister(0x40004, rpm);
-  node.writeSingleRegister(0x40005, fuel);
+  node.writeSingleRegister(0x40005, fuel); 
+  // Simulation program for receiving data, command when not used
   node.writeSingleRegister(0x40006, 1);
   node.writeSingleRegister(0x40007, 1);
   node.writeSingleRegister(0x40008, 45);
   node.writeSingleRegister(0x40009, 1);
+  node.writeSingleRegister(0x40010, lastValue);
+  node.writeSingleRegister(0x40011, elapsedTime);
 
   result = node.readHoldingRegisters(0x40006, 4);
   startReg = node.getResponseBuffer(0);
@@ -229,16 +253,33 @@ void loop() {
 
   // ----- Check startReg and stopReg ----- //
   if (startReg == 1) {
-    Serial.println("starting");
+    //    Serial.println("starting");
+    digitalWrite(relay1, LOW);
+    delay(4000);
+    for (pos = 100; pos >= 35; pos -= 1) {
+      myServo.write(pos);
+      delay(50);
+    }
+    delay(4000);
+    digitalWrite(relay2, LOW);
   }
 
   if (stopReg == 1) {
-    Serial.println("stopping");
+    //    Serial.println("stopping");
+    digitalWrite(relay2, HIGH);
+    delay(4000);
+    for (pos = 35; pos <= 100; pos += 1) {
+      myServo.write(pos);
+      delay(50);
+    }
+    delay(4000);
+    digitalWrite(relay1, HIGH);
   }
 
   varDeg = map(mapDeg, 0, 100, 32, 10);
   if (changeDeg == 1) {
-    Serial.println("change servo to : " + String(varDeg));
+    //    Serial.println("change servo to : " + String(varDeg));
+    myServo.write(varDeg);
   }
 
   delay(1000);
