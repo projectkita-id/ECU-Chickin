@@ -39,21 +39,3 @@ Follow these steps to install and run this project on your local machine:
 ## Usage  
   
 Once the code is uploaded, the project will start monitoring and controlling electrical and temperature parameters. Information will be displayed on the LCD, and data will be transmitted via RS-485 communication. You can control relays and servos based on the received data.  
-  
-## Contributing  
-  
-We appreciate contributions from everyone. If you would like to contribute, please follow these steps:  
-  
-1. Fork this repository.  
-2. Create a new branch (`git checkout -b new-feature`).  
-3. Make your changes and commit (`git commit -m 'Add new feature'`).  
-4. Push to the branch (`git push origin new-feature`).  
-5. Create a Pull Request.  
-  
-## License  
-  
-This project is licensed under the [MIT License](LICENSE).  
-  
-## Contact  
-  
-If you have any questions, please contact [Your Name](mailto:email@domain.com).  
