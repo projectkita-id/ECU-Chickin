@@ -9,7 +9,7 @@
 
 // ----------------------------- Fuel Sensor ---------------------------------- //
 int TankValue;
-const uint8_t fuelPin = A1;
+const uint8_t fuelPin = A7;
 
 // -------------------------------- Servo ------------------------------------- //
 Servo myServo;
@@ -18,16 +18,14 @@ int pos = 0;
 int varDeg;
 
 // -------------------------------- Relay ------------------------------------- //
-int relay1 = 11;
-int relay2 = 4;
-int relay3 = 5;
-int relay4 = 6;
-int relay5 = 7;
-int relay6 = 8;
+int relay1 = A0;
+int relay2 = A1;
+int relay3 = A2;
+
 
 // ------------------------------ MAX_RS485 ----------------------------------- //
-const uint8_t MAX485_DE = A2;
-const uint8_t MAX485_RE_NEG = A3;
+const uint8_t MAX485_DE = 7;
+const uint8_t MAX485_RE_NEG = 6;
 ModbusMaster node;
 int startReg; //Reg for starting function when receive true value
 int stopReg; //Reg for stopping function when receive true value
@@ -50,6 +48,8 @@ int address = 0;
 int odoH;
 unsigned long startTime = 0;
 bool isTiming = false;
+int lastValue;
+unsigned long elapsedTime;
 
 // ------------------------------- MAX_6675 ---------------------------------- //
 #define SCK_PIN 13
@@ -74,7 +74,7 @@ Adafruit_INA219 ina219(0x40);
 float current_mA = 0;
 
 // ----------------------------- Voltage Sensor ------------------------------ //
-const uint8_t ANALOG_IN_PIN = A0;
+const uint8_t ANALOG_IN_PIN = A6;
 float adc_voltage = 0.0;
 float in_voltage = 0.0;
 float R1 = 30000.0;
@@ -135,20 +135,13 @@ void setup() {
   pinMode(relay1, OUTPUT);
   pinMode(relay2, OUTPUT);
   pinMode(relay3, OUTPUT);
-  pinMode(relay4, OUTPUT);
-  pinMode(relay5, OUTPUT);
-  pinMode(relay6, OUTPUT);
   digitalWrite(relay1, HIGH);
   digitalWrite(relay2, HIGH);
   digitalWrite(relay3, HIGH);
-  digitalWrite(relay4, HIGH);
-  digitalWrite(relay5, HIGH);
-  digitalWrite(relay6, HIGH);
 
   // ------ RPM ------- //
   pinMode(IR_PIN, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(IR_PIN), Interrupt, FALLING);
-  int lastValue;
   EEPROM.get(address, lastValue);
   Serial.print("Nilai terakhir yang disimpan: ");
   Serial.println(lastValue);
@@ -191,7 +184,7 @@ void loop() {
       startTime = millis();
       isTiming = true;
     }
-    unsigned long elapsedTime = (millis() - startTime) / 1000;
+    elapsedTime = (millis() - startTime) / 1000;
     Serial.print("Waktu berjalan (detik): ");
     Serial.println(elapsedTime);
     EEPROM.put(address, elapsedTime);
@@ -231,7 +224,7 @@ void loop() {
   node.writeSingleRegister(0x40002, celsius);
   node.writeSingleRegister(0x40003, celsius2);
   node.writeSingleRegister(0x40004, rpm);
-  node.writeSingleRegister(0x40005, fuel); 
+  node.writeSingleRegister(0x40005, fuel);
   // Simulation program for receiving data, command when not used
   node.writeSingleRegister(0x40006, 1);
   node.writeSingleRegister(0x40007, 1);
@@ -253,32 +246,38 @@ void loop() {
 
   // ----- Check startReg and stopReg ----- //
   if (startReg == 1) {
-    //    Serial.println("starting");
+    Serial.println("starting");
+    Serial.println("relay 1 on");
     digitalWrite(relay1, LOW);
     delay(4000);
+    Serial.println("servo berputar ke posisi 1000 rpm");
     for (pos = 100; pos >= 35; pos -= 1) {
       myServo.write(pos);
       delay(50);
     }
     delay(4000);
+    Serial.println("relay 2 on");
     digitalWrite(relay2, LOW);
   }
 
   if (stopReg == 1) {
-    //    Serial.println("stopping");
+    Serial.println("stopping");
+    Serial.println("relay 2 off");
     digitalWrite(relay2, HIGH);
     delay(4000);
+    Serial.println("servo balik ke posisi off");
     for (pos = 35; pos <= 100; pos += 1) {
       myServo.write(pos);
       delay(50);
     }
     delay(4000);
+    Serial.println("relay 1 off");
     digitalWrite(relay1, HIGH);
   }
 
   varDeg = map(mapDeg, 0, 100, 32, 10);
   if (changeDeg == 1) {
-    //    Serial.println("change servo to : " + String(varDeg));
+    Serial.println("change servo to : " + String(varDeg));
     myServo.write(varDeg);
   }
 
