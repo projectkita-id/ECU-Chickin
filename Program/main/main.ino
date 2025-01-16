@@ -225,13 +225,7 @@ void loop() {
   node.writeSingleRegister(0x40003, celsius2);
   node.writeSingleRegister(0x40004, rpm);
   node.writeSingleRegister(0x40005, fuel);
-  // Simulation program for receiving data, command when not used
-  node.writeSingleRegister(0x40006, 1);
-  node.writeSingleRegister(0x40007, 1);
-  node.writeSingleRegister(0x40008, 45);
-  node.writeSingleRegister(0x40009, 1);
-  node.writeSingleRegister(0x40010, lastValue);
-  node.writeSingleRegister(0x40011, elapsedTime);
+  // Simulation program for receiving data, command when not us
 
   result = node.readHoldingRegisters(0x40006, 4);
   startReg = node.getResponseBuffer(0);
