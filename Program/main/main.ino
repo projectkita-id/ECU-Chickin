@@ -1,4 +1,3 @@
-// -------------------------- Component Library -------------------------------- //
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
 #include <Adafruit_INA219.h>
@@ -24,18 +23,10 @@ int relay3 = A2;
 
 
 // ------------------------------ MAX_RS485 ----------------------------------- //
-const uint8_t RE_PIN = 7;  // Receiver Enable
-const uint8_t DE_PIN = 6;  // Driver Enable
-uint16_t modbus_array[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-Modbus bus(1, Serial, DE_PIN); // Slave ID = 1, Serial port, DE_PIN untuk kontrol RS485
 int startReg; //Reg for starting function when receive true value
 int stopReg; //Reg for stopping function when receive true value
 int mapDeg; //Reg for saving custom servo degree based on persentation (0% - 100%)
 int changeDeg; //Move servo degree based on mapDeg when receive true value
-int function1; //function 1 - 4 for further use
-int function2;
-int function3;
-int function4;
 
 // ------------------------------ RPM Sensor ---------------------------------- //
 const int IR_PIN = 2;
@@ -75,6 +66,14 @@ int adc_value = 0;
 
 // -------------------------------- LCD_I2C --------------------------------- //
 LiquidCrystal_I2C lcd(0x27, 20, 4);
+const uint8_t RE_PIN = 4;  // Receiver Enable
+const uint8_t DE_PIN = 5;  // Driver Enable
+const int LED = 13;        // LED untuk status
+
+// Data array untuk menyimpan register Modbus
+uint16_t modbus_array[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+// Buat objek Modbus slave
+Modbus bus(1, Serial, DE_PIN); // Slave ID = 1, Serial port, DE_PIN untuk kontrol RS485
 byte fullBlock[8] = { 0b11111, 0b11111, 0b11111, 0b11111, 0b11111, 0b11111, 0b11111, 0b11111 };
 byte emptyBlock[8] = { 0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b00000, 0b00000 };
 void bootScreen()
@@ -108,17 +107,18 @@ void bootScreen()
 }
 
 void setup() {
-  // ----- RS485 ------ //
-  Serial.begin(9600);
   pinMode(RE_PIN, OUTPUT);
   pinMode(DE_PIN, OUTPUT);
+  pinMode(LED, OUTPUT);
+
   digitalWrite(RE_PIN, LOW);  // Default ke mode Receive
   digitalWrite(DE_PIN, LOW);  // Default ke mode Receive
+
+  // Inisialisasi komunikasi Modbus
   bus.begin(9600); // Baud rate 9600 bps
 
   // ----- INA219 ----- //
   if (!ina219.begin()) {
-    Serial.println("Failed to find INA219 chip at address 0x40");
   }
 
   // ----- Servo ------ //
@@ -139,8 +139,6 @@ void setup() {
   pinMode(IR_PIN, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(IR_PIN), Interrupt, FALLING);
   EEPROM.get(address, lastValue);
-  Serial.print("Nilai terakhir yang disimpan: ");
-  Serial.println(lastValue);
 
   // ----- Fuel ------- //
   pinMode(fuelPin, INPUT_PULLUP);
@@ -157,14 +155,10 @@ void setup() {
   lcd.backlight();
   bootScreen();
   lcd.clear();
-  //  Serial.println("SETUP DONE");
 }
 
 void loop() {
-  uint8_t result;
-  uint16_t data[6];
   unsigned long currentMillis = millis();
-
   // ----- Fuel ------- //
   int fuel = analogRead(fuelPin);
   fuel = map(fuel, 524, 1024, 100, 0);
@@ -191,6 +185,13 @@ void loop() {
   // -- Thermocouple -- //
   const double celsius = thermocouple->readCelsius();
   const double celsius2 = thermocouple2->readCelsius();
+  if (celsius == isnan) {
+    celsius = 0;
+  }
+
+  if (celsius2 == isnan) {
+    celsius2 = 0;
+  }
 
   // ----- INA219 ----- //
   current_mA = ina219.getCurrent_mA();
@@ -208,13 +209,11 @@ void loop() {
   lcd.setCursor(0, 2);
   lcd.print("I:" + String(current_mA) + "A");
   lcd.setCursor(9, 1);
-  lcd.print("tmp1:" + String(celsius) + "C");
+  lcd.print("tmp1:" + String(celsiusx`) + "C");
   lcd.setCursor(9, 2);
   lcd.print("tmp2:" + String(celsius2) + "C");
   lcd.setCursor(0, 3);
   lcd.print("RPM:" + String(rpm) + "rpm" + " Fuel:" + String(fuel) + "%");
-
-  // ----- RS485 ------ //
 
   modbus_array[0] = in_voltage;    // Register pertama (0 atau 1)
   modbus_array[1] = current_mA;              // Register kedua (konstan)
@@ -223,17 +222,13 @@ void loop() {
   modbus_array[4] = rpm;              // Register kedua (konstan)
   modbus_array[5] = fuel;  // Register ketiga (random 0–100)
 
-  bus.poll(modbus_array, sizeof(modbus_array) / sizeof(modbus_array[0]));
-  result = modbus_array[6];
-  startReg = modbus_array[7];
-  stopReg = modbus_array[8];
-  mapDeg = modbus_array[9];
-  changeDeg = modbus_array[10];
 
-  Serial.println("data start : " + String(startReg));
-  Serial.println("data stop : " + String(stopReg));
-  Serial.println("mapDeg : " + String(mapDeg));
-  Serial.println("changeDeg : " + String(changeDeg));
+  // Handle polling dari master
+  bus.poll(modbus_array, sizeof(modbus_array) / sizeof(modbus_array[0]));
+  startReg = modbus_array[6];
+  stopReg = modbus_array[7];
+  mapDeg = modbus_array[8];
+  changeDeg = modbus_array[9];
 
   // ----- Check startReg and stopReg ----- //
   if (startReg == 1) {
@@ -275,5 +270,6 @@ void loop() {
   }
 
   lcd.clear();
-  delay(1000);
+
+  delay(1000); // Delay 1 detik
 }
