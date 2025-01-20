@@ -1,11 +1,11 @@
 // -------------------------- Component Library -------------------------------- //
 #include <Wire.h>
 #include <LiquidCrystal_I2C.h>
-#include <ModbusMaster.h>
 #include <Adafruit_INA219.h>
 #include <MAX6675_Thermocouple.h>
 #include <Servo.h>
 #include <EEPROM.h>
+#include <ModbusRtu.h>
 
 // ----------------------------- Fuel Sensor ---------------------------------- //
 int TankValue;
@@ -24,9 +24,10 @@ int relay3 = A2;
 
 
 // ------------------------------ MAX_RS485 ----------------------------------- //
-const uint8_t MAX485_DE = 7;
-const uint8_t MAX485_RE_NEG = 6;
-ModbusMaster node;
+const uint8_t RE_PIN = 7;  // Receiver Enable
+const uint8_t DE_PIN = 6;  // Driver Enable
+uint16_t modbus_array[10] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+Modbus bus(1, Serial, DE_PIN); // Slave ID = 1, Serial port, DE_PIN untuk kontrol RS485
 int startReg; //Reg for starting function when receive true value
 int stopReg; //Reg for stopping function when receive true value
 int mapDeg; //Reg for saving custom servo degree based on persentation (0% - 100%)
@@ -58,16 +59,6 @@ unsigned long elapsedTime;
 #define SO_PIN 12
 Thermocouple* thermocouple;
 Thermocouple* thermocouple2;
-void preTransmission()            //Function for setting state of Pins DE & RE of RS-485
-{
-  digitalWrite(MAX485_RE_NEG, 1);
-  digitalWrite(MAX485_DE, 1);
-}
-void postTransmission()
-{
-  digitalWrite(MAX485_RE_NEG, 0);
-  digitalWrite(MAX485_DE, 0);
-}
 
 // -------------------------------- INA_219 ---------------------------------- //
 Adafruit_INA219 ina219(0x40);
@@ -119,13 +110,11 @@ void bootScreen()
 void setup() {
   // ----- RS485 ------ //
   Serial.begin(9600);
-  pinMode(MAX485_RE_NEG, OUTPUT);
-  pinMode(MAX485_DE, OUTPUT);
-  digitalWrite(MAX485_RE_NEG, 0);
-  digitalWrite(MAX485_DE, 0);
-  node.begin(1, Serial);
-  node.preTransmission(preTransmission);
-  node.postTransmission(postTransmission);
+  pinMode(RE_PIN, OUTPUT);
+  pinMode(DE_PIN, OUTPUT);
+  digitalWrite(RE_PIN, LOW);  // Default ke mode Receive
+  digitalWrite(DE_PIN, LOW);  // Default ke mode Receive
+  bus.begin(9600); // Baud rate 9600 bps
 
   // ----- INA219 ----- //
   if (!ina219.begin()) {
@@ -178,7 +167,7 @@ void loop() {
 
   // ----- Fuel ------- //
   int fuel = analogRead(fuelPin);
-  fuel = map(fuel, 548, 1024, 100, 0);
+  fuel = map(fuel, 524, 1024, 100, 0);
 
   // ------ RPM ------- //
   if (currentMillis - previousMillis >= 1000) {
@@ -226,18 +215,20 @@ void loop() {
   lcd.print("RPM:" + String(rpm) + "rpm" + " Fuel:" + String(fuel) + "%");
 
   // ----- RS485 ------ //
-  node.writeSingleRegister(0x40000, in_voltage);
-  node.writeSingleRegister(0x40001, current_mA);
-  node.writeSingleRegister(0x40002, celsius);
-  node.writeSingleRegister(0x40003, celsius2);
-  node.writeSingleRegister(0x40004, rpm);
-  node.writeSingleRegister(0x40005, fuel);
 
-  result = node.readHoldingRegisters(0x40006, 4);
-  startReg = node.getResponseBuffer(0);
-  stopReg = node.getResponseBuffer(1);
-  mapDeg = node.getResponseBuffer(2);
-  changeDeg = node.getResponseBuffer(3);
+  modbus_array[0] = in_voltage;    // Register pertama (0 atau 1)
+  modbus_array[1] = current_mA;              // Register kedua (konstan)
+  modbus_array[2] = celsius;  // Register ketiga (random 0–100)
+  modbus_array[3] = celsius2;    // Register pertama (0 atau 1)
+  modbus_array[4] = rpm;              // Register kedua (konstan)
+  modbus_array[5] = fuel;  // Register ketiga (random 0–100)
+
+  bus.poll(modbus_array, sizeof(modbus_array) / sizeof(modbus_array[0]));
+  result = modbus_array[6];
+  startReg = modbus_array[7];
+  stopReg = modbus_array[8];
+  mapDeg = modbus_array[9];
+  changeDeg = modbus_array[10];
 
   Serial.println("data start : " + String(startReg));
   Serial.println("data stop : " + String(stopReg));
