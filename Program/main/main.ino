@@ -127,6 +127,11 @@ void setup() {
   node.preTransmission(preTransmission);
   node.postTransmission(postTransmission);
 
+  // ----- INA219 ----- //
+  if (!ina219.begin()) {
+    Serial.println("Failed to find INA219 chip at address 0x40");
+  }
+
   // ----- Servo ------ //
   myServo.attach(servo);
   myServo.write(100);
@@ -135,6 +140,8 @@ void setup() {
   pinMode(relay1, OUTPUT);
   pinMode(relay2, OUTPUT);
   pinMode(relay3, OUTPUT);
+  pinMode(13, OUTPUT);
+  digitalWrite(13, LOW);
   digitalWrite(relay1, HIGH);
   digitalWrite(relay2, HIGH);
   digitalWrite(relay3, HIGH);
@@ -225,7 +232,6 @@ void loop() {
   node.writeSingleRegister(0x40003, celsius2);
   node.writeSingleRegister(0x40004, rpm);
   node.writeSingleRegister(0x40005, fuel);
-  // Simulation program for receiving data, command when not us
 
   result = node.readHoldingRegisters(0x40006, 4);
   startReg = node.getResponseBuffer(0);
@@ -233,15 +239,16 @@ void loop() {
   mapDeg = node.getResponseBuffer(2);
   changeDeg = node.getResponseBuffer(3);
 
-  //  Serial.println("data start : " + String(startReg));
-  //  Serial.println("data stop : " + String(stopReg));
-  //  Serial.println("mapDeg : " + String(mapDeg));
-  //  Serial.println("changeDeg : " + String(changeDeg));
+  Serial.println("data start : " + String(startReg));
+  Serial.println("data stop : " + String(stopReg));
+  Serial.println("mapDeg : " + String(mapDeg));
+  Serial.println("changeDeg : " + String(changeDeg));
 
   // ----- Check startReg and stopReg ----- //
   if (startReg == 1) {
     Serial.println("starting");
     Serial.println("relay 1 on");
+    digitalWrite(13, HIGH);
     digitalWrite(relay1, LOW);
     delay(4000);
     Serial.println("servo berputar ke posisi 1000 rpm");
@@ -254,10 +261,17 @@ void loop() {
     digitalWrite(relay2, LOW);
   }
 
+  varDeg = map(mapDeg, 0, 100, 32, 10);
+  if (changeDeg == 1) {
+    Serial.println("change servo to : " + String(varDeg));
+    myServo.write(varDeg);
+  }
+
   if (stopReg == 1) {
     Serial.println("stopping");
     Serial.println("relay 2 off");
     digitalWrite(relay2, HIGH);
+    digitalWrite(13, LOW);
     delay(4000);
     Serial.println("servo balik ke posisi off");
     for (pos = 35; pos <= 100; pos += 1) {
@@ -269,11 +283,6 @@ void loop() {
     digitalWrite(relay1, HIGH);
   }
 
-  varDeg = map(mapDeg, 0, 100, 32, 10);
-  if (changeDeg == 1) {
-    Serial.println("change servo to : " + String(varDeg));
-    myServo.write(varDeg);
-  }
-
+  lcd.clear();
   delay(1000);
 }
