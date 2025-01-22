@@ -21,7 +21,7 @@ Before you begin, ensure you have the following installed:
 - Required libraries:  
   - `Wire`  
   - `LiquidCrystal_I2C`  https://github.com/johnrickman/LiquidCrystal_I2C.git
-  - `ModbusMaster`  https://github.com/syvic/ModbusMaster.git
+  - `ModbusRTUSlave`  https://github.com/CMB27/ModbusRTUSlave.git
   - `Adafruit_INA219`  https://github.com/adafruit/Adafruit_INA219.git
   - `MAX6675_Thermocouple`  https://github.com/suoapvs/MAX6675_Thermocouple.git
   - `Servo`  
