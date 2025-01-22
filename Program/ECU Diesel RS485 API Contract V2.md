@@ -96,8 +96,36 @@
 - **Save to EEPROOM**: no
 - **Update Interval**: 5 Second
 
-### 7 start function
-- **Address**: 0x40006 Register data
+### 7 odo hours meter
+- **Address**: 0x40006  Register data
+- **Description**: Read from last value from odoH
+- **Type Data**: Int
+- **Status Address**:
+- **Parity & Stop Bit**: 8N1
+- **Status Data**: Read only
+- **Unit Value**: Seconds
+- **Default Value**: 0
+- **Min Value**: 0
+- **Max Value**: -
+- **Save to EEPROOM**: yes
+- **Update Interval**: 5 Second
+
+### 8 current odo hours meter
+- **Address**: 0x40007  Register data
+- **Description**: Read from current value from odoH
+- **Type Data**: Int
+- **Status Address**:
+- **Parity & Stop Bit**: 8N1
+- **Status Data**: Read only
+- **Unit Value**: Seconds
+- **Default Value**: 0
+- **Min Value**: 0
+- **Max Value**: -
+- **Save to EEPROOM**: yes
+- **Update Interval**: 5 Second
+
+### 9 start function
+- **Address**: 0x40008 Register data
 - **Description**: Function to start the machine
 - **Type Data**: Int
 - **Status Address**:
@@ -110,8 +138,8 @@
 - **Save to EEPROOM**: no
 - **Update Interval**: 5 Second
 
-### 8 stop function
-- **Address**: 0x40007 register data
+### 10 stop function
+- **Address**: 0x40009 register data
 - **Description**: Function to stop the machine
 - **Type Data**: Int
 - **Status Address**:
@@ -124,8 +152,8 @@
 - **Save to EEPROOM**: no
 - **Update Interval**: 5 Second
 
-### 9 Servo percentage
-- **Address**: 0x40008 Register data
+### 11 Servo percentage
+- **Address**: 0x40010 Register data
 - **Description**: Function to send Servo value
 - **Type Data**: Int
 - **Status Address**:
@@ -138,8 +166,8 @@
 - **Save to EEPROOM**: no
 - **Update Interval**: 5 Second
 
-### 10 Servo move
-- **Address**: 0x40009 Register data
+### 12 Servo move
+- **Address**: 0x40011 Register data
 - **Description**: Function to move servo based on Servo percentage
 - **Type Data**: Int
 - **Status Address**:
@@ -151,35 +179,7 @@
 - **Max Value**: 1
 - **Save to EEPROOM**: no
 - **Update Interval**: 5 Second
-
-### 11 Last odo hours
-- **Address**: 0x40010 Register data
-- **Description**: Read last value from odo hours
-- **Type Data**: Int
-- **Status Address**:
-- **Parity & Stop Bit**: 8N1
-- **Status Data**: Write only
-- **Unit Value**: Seconds
-- **Default Value**: 0
-- **Min Value**: 0
-- **Max Value**: -
-- **Save to EEPROOM**: no
-- **Update Interval**: 5 Second
-
-### 11 Current odo hours
-- **Address**: 0x40011 Register data
-- **Description**: Read current odo hours 
-- **Type Data**: Int
-- **Status Address**:
-- **Parity & Stop Bit**: 8N1
-- **Status Data**: Write only
-- **Unit Value**: Seconds
-- **Default Value**: 0
-- **Min Value**: 0
-- **Max Value**: -
-- **Save to EEPROOM**: yes
-- **Update Interval**: 5 Second
-
+- 
 ## Error Handler
 - **Address**: 0x00xxxx
 - **Description**: Error failure status
