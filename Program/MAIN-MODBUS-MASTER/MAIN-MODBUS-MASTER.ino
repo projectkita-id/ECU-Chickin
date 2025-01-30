@@ -34,7 +34,7 @@ int relay3 = A2;
 const int8_t dePin = 7;
 const int8_t rePin = 6;
 ModbusRTUSlave modbus(MODBUS_SERIAL, dePin);
-const uint8_t numHoldingRegisters = 12;
+const uint8_t numHoldingRegisters = 14;
 uint16_t holdingRegisters[numHoldingRegisters];
 boolean START = false;
 boolean STOP = false;
@@ -43,10 +43,10 @@ int startReg; //Reg for starting function when receive true value
 int stopReg; //Reg for stopping function when receive true value
 int mapDeg; //Reg for saving custom servo degree based on persentation (0% - 100%)
 int changeDeg; //Move servo degree based on mapDeg when receive true value
-int function1; //function 1 - 4 for further use
-int function2;
-int function3;
-int function4;
+int engineStart;
+int engineStop;
+boolean starting = false; //function 1 - 4 for further use
+boolean stopping = false;
 
 // ------------------------------ RPM Sensor ---------------------------------- //
 const int IR_PIN = 2;
@@ -57,10 +57,10 @@ void Interrupt() {
   counter++;
 }
 int address = 0;
+int totalRun;
 int odoH;
 unsigned long startTime = 0;
 bool isTiming = false;
-int lastValue;
 unsigned long elapsedTime;
 
 // ------------------------------- MAX_6675 ---------------------------------- //
@@ -136,7 +136,7 @@ void setup() {
 
   // ----- Servo ------ //
   myServo.attach(servo);
-  myServo.write(100);
+  myServo.write(125);
 
   // ----- Relay ------ //
   pinMode(relay1, OUTPUT);
@@ -151,7 +151,7 @@ void setup() {
   // ------ RPM ------- //
   pinMode(IR_PIN, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(IR_PIN), Interrupt, FALLING);
-  EEPROM.get(address, lastValue);
+  EEPROM.get(address, odoH);
 
   // ----- Fuel ------- //
   pinMode(fuelPin, INPUT_PULLUP);
@@ -176,7 +176,7 @@ void loop() {
   // ----- Fuel ------- //
   int fuel = analogRead(fuelPin);
   fuel = map(fuel, 860, 1024, 100, 0);
-  
+
 
   // ------ RPM ------- //
   if (currentMillis - previousMillis >= 1000) {
@@ -184,13 +184,14 @@ void loop() {
     rpm = (counter / 2) * 60;
     counter = 0;
   }
-  if (rpm >= 9000) {
+  if (rpm >= 120) {
     if (!isTiming) {
       startTime = millis();
       isTiming = true;
     }
     elapsedTime = (millis() - startTime) / 1000;
-    EEPROM.put(address, elapsedTime);
+    totalRun = elapsedTime +  odoH;
+    EEPROM.put(address, totalRun);
   } else {
     isTiming = false;
   }
@@ -212,7 +213,7 @@ void loop() {
   adc_value = analogRead(ANALOG_IN_PIN);
   adc_voltage = (adc_value * ref_voltage) / 1024.0;
   in_voltage = adc_voltage / (R2 / (R1 + R2)) ;
-  
+
   // ------ LCD ------- //
   if (currentMillis - previousLCDMillis >= lcdInterval) {
     previousLCDMillis = currentMillis;
@@ -240,8 +241,8 @@ void loop() {
   holdingRegisters[3] = celsius2;
   holdingRegisters[4] = rpm;
   holdingRegisters[5] = fuel;
-  holdingRegisters[6] = 100;
-  holdingRegisters[7] = 100;
+  holdingRegisters[6] = totalRun;
+  holdingRegisters[7] = elapsedTime;
   delay(10);
   digitalWrite(dePin, LOW);
   digitalWrite(rePin, LOW);
@@ -256,24 +257,26 @@ void loop() {
     digitalWrite(13, LOW);
     digitalWrite(relay1, LOW);
     delay(4000);
-    for (pos = 100; pos >= 35; pos -= 1) {
+    for (pos = 125; pos >= 70; pos -= 1) {
       myServo.write(pos);
       delay(50);
     }
     delay(4000);
     digitalWrite(relay2, LOW);
+    delay(10000);
+    digitalWrite(relay2, HIGH);
     START = true;
   }
-  if (START == true && startReg != startReg) {
+  if (START == true && startReg == 0) {
     START = false;
   }
 
-  varDeg = map(mapDeg, 0, 100, 32, 10);
+  varDeg = map(mapDeg, 0, 100, 70, 35);
   if (changeDeg == 1 && SERVO == false) {
     myServo.write(varDeg);
     SERVO = true;
   }
-  if (SERVO == true && changeDeg != changeDeg) {
+  if (SERVO == true && changeDeg == 0) {
     SERVO = false;
   }
 
@@ -281,15 +284,23 @@ void loop() {
     digitalWrite(relay2, HIGH);
     digitalWrite(13, HIGH);
     delay(4000);
-    for (pos = 35; pos <= 100; pos += 1) {
-      myServo.write(pos);
-      delay(50);
+    if (varDeg != 0) {
+      for (pos = varDeg; pos <= 125; pos += 1) {
+        myServo.write(pos);
+        delay(50);
+      }
+    } else {
+      for (pos = 70; pos <= 125; pos += 1) {
+        myServo.write(pos);
+        delay(50);
+      }
     }
+    delay(6000);
     digitalWrite(relay1, HIGH);
     STOP = true;
+    stopping = true;
   }
-  if (STOP == true && stopReg != stopReg) {
+  if (STOP == true && stopReg == 0) {
     STOP = false;
   }
-
 }
