@@ -16,7 +16,11 @@ ModbusRTUSlave modbus(MODBUS_SERIAL, dePin);
 
 const uint8_t numHoldingRegisters = 14;
 uint16_t holdingRegisters[numHoldingRegisters];
-
+int data1 = 0;
+int data2 = 0;
+int data3 = 0;
+int data4 = 0;
+int data5 = 0;
 
 void setup() {
   // ----- RS485 ------ //
