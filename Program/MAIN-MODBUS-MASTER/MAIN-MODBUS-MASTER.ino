@@ -36,23 +36,59 @@ const int8_t rePin = 6;
 ModbusRTUSlave modbus(MODBUS_SERIAL, dePin);
 const uint8_t numHoldingRegisters = 14;
 uint16_t holdingRegisters[numHoldingRegisters];
-boolean START = false;
-boolean STOP = false;
-boolean SERVO = false;
 int startReg; //Reg for starting function when receive true value
 int stopReg; //Reg for stopping function when receive true value
 int mapDeg; //Reg for saving custom servo degree based on persentation (0% - 100%)
 int changeDeg; //Move servo degree based on mapDeg when receive true value
 int engineStart;
 int engineStop;
-boolean starting = false; //function 1 - 4 for further use
-boolean stopping = false;
+bool isRunning = false;
+bool isStopping = false;
+bool hasStopped = true;
+bool START = false;
+bool STOP = false;
+const unsigned long stepDelay = 2000;  // Jeda antar step (2 detik)
+int stepIndex = 0;
+struct Step {
+  void (*action)();
+};
+void startStep1() {
+  Serial.println("Menyalakan relay1");
+  digitalWrite(relay1, LOW);
+}
+void startStep2() {
+  Serial.println("Menyalakan servo"); for (pos = 70; pos <= 125; pos += 1) {
+    myServo.write(pos);
+    delay(10);
+  }
+}
+void startStep3() {
+  Serial.println("Menyalakan relay2");
+  digitalWrite(relay2, LOW);
+}
+void stopStep1()  {
+  Serial.println("Mematikan relay2");
+  digitalWrite(relay2, HIGH);
+}
+void stopStep2()  {
+  Serial.println("Mematikan servo"); for (pos = 125; pos >= 70; pos -= 1) {
+    myServo.write(pos);
+    delay(10);
+  }
+}
+void stopStep3()  {
+  Serial.println("Mematikan relay1");
+  digitalWrite(relay1, HIGH);
+}
+
+Step startSequence[] = { {startStep1}, {startStep2}, {startStep3} };
+Step stopSequence[]  = { {stopStep1}, {stopStep2}, {stopStep3} };
 
 // ------------------------------ RPM Sensor ---------------------------------- //
 const int IR_PIN = 2;
 volatile unsigned int counter = 0;
 unsigned long previousMillis = 0;
-volatile unsigned int rpm = 0;
+unsigned int rpm = 0;
 void Interrupt() {
   counter++;
 }
@@ -182,7 +218,7 @@ void loop() {
   // ------ RPM ------- //
   if (currentMillis - previousMillis >= 1000) {
     previousMillis = currentMillis;
-    rpm = (counter / 3) * 60;
+    rpm = (counter / 2) * 60;
     counter = 0;
   }
   if (rpm >= 120) {
@@ -255,48 +291,55 @@ void loop() {
   changeDeg = holdingRegisters[11];
 
   // ----- Check startReg and stopReg ----- //
-  if (startReg == 1 && START == false) {
-    digitalWrite(13, LOW);
-    digitalWrite(relay1, LOW);
-    delay(4000);
-    for (pos = 125; pos >= 70; pos -= 1) {
-      myServo.write(pos);
-      delay(50);
-    }
-    delay(4000);
-    digitalWrite(relay2, LOW);
-    delay(10000);
-    digitalWrite(relay2, HIGH);
-    START = true;
+  if (startReg == 1 && !isRunning && !isStopping && hasStopped && START == false) {
+    Serial.println("Memulai Sequence START...");
+    isRunning = true;
+    isStopping = false;
+    hasStopped = false; // Mencegah start berulang sebelum stop dilakukan
+    stepIndex = 0;
+    previousMillis = millis();
   }
   if (START == true && startReg == 0) {
     START = false;
   }
 
   varDeg = map(mapDeg, 0, 100, 70, 35);
-  myServo.write(varDeg);
+  if (!isStopping) {
+    myServo.write(varDeg);
+  }
 
-  if (stopReg == 1 && STOP == false) {
-    digitalWrite(relay2, HIGH);
-    digitalWrite(13, HIGH);
-    delay(4000);
-    if (varDeg != 0) {
-      for (pos = varDeg; pos <= 125; pos += 1) {
-        myServo.write(pos);
-        delay(50);
-      }
-    } else {
-      for (pos = 70; pos <= 125; pos += 1) {
-        myServo.write(pos);
-        delay(50);
-      }
-    }
-    delay(6000);
-    digitalWrite(relay1, HIGH);
-    STOP = true;
-    stopping = true;
+  if (stopReg == 1 && !isStopping && !isRunning && STOP == false) {
+    Serial.println("Memulai Sequence STOP...");
+    isRunning = false;
+    isStopping = true;
+    stepIndex = 0;
+    previousMillis = millis();
   }
   if (STOP == true && stopReg == 0) {
     STOP = false;
+  }
+
+  if (isRunning && stepIndex < 3) {
+    if (millis() - previousMillis >= stepDelay) {
+      previousMillis = millis();
+      startSequence[stepIndex].action();
+      stepIndex++;
+      if (stepIndex >= 3) {
+        isRunning = false;
+        START = true;
+      }
+    }
+  }
+  if (isStopping && stepIndex < 3) {
+    if (millis() - previousMillis >= stepDelay) {
+      previousMillis = millis();
+      stopSequence[stepIndex].action();
+      stepIndex++;
+      if (stepIndex >= 3) {
+        isStopping = false;
+        hasStopped = true;
+        STOP = true;
+      }
+    }
   }
 }
