@@ -62,6 +62,7 @@ int odoH;
 unsigned long startTime = 0;
 bool isTiming = false;
 unsigned long elapsedTime;
+unsigned long elapsedTimeInHours;
 
 // ------------------------------- MAX_6675 ---------------------------------- //
 #define SCK_PIN 13
@@ -190,7 +191,8 @@ void loop() {
       isTiming = true;
     }
     elapsedTime = (millis() - startTime) / 1000;
-    totalRun = elapsedTime +  odoH;
+    elapsedTimeInHours = elapsedTime / 3600;
+    totalRun = elapsedTimeInHours +  odoH;
     EEPROM.put(address, totalRun);
   } else {
     isTiming = false;
@@ -242,7 +244,7 @@ void loop() {
   holdingRegisters[4] = rpm;
   holdingRegisters[5] = fuel;
   holdingRegisters[6] = totalRun;
-  holdingRegisters[7] = elapsedTime;
+  holdingRegisters[7] = elapsedTimeInHours;
   delay(10);
   digitalWrite(dePin, LOW);
   digitalWrite(rePin, LOW);
@@ -272,13 +274,7 @@ void loop() {
   }
 
   varDeg = map(mapDeg, 0, 100, 70, 35);
-  if (changeDeg == 1 && SERVO == false) {
-    myServo.write(varDeg);
-    SERVO = true;
-  }
-  if (SERVO == true && changeDeg == 0) {
-    SERVO = false;
-  }
+  myServo.write(varDeg);
 
   if (stopReg == 1 && STOP == false) {
     digitalWrite(relay2, HIGH);
