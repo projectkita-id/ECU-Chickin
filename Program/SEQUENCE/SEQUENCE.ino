@@ -1,6 +1,11 @@
+#include <Servo.h>
+
+Servo myServo;
+int servo = 3;
+int pos = 0;
+
 const int relay1 = A0;
 const int relay2 = A1;
-const int relay3 = A2;
 const int ledPin = 13;
 
 bool isRunning = false;
@@ -14,10 +19,16 @@ struct Step {
 };
 
 void startStep1() { Serial.println("Menyalakan relay1"); digitalWrite(relay1, LOW); }
-void startStep2() { Serial.println("Menyalakan relay2"); digitalWrite(relay2, LOW); }
-void startStep3() { Serial.println("Menyalakan relay3"); digitalWrite(relay3, LOW); }
-void stopStep1()  { Serial.println("Mematikan relay3"); digitalWrite(relay3, HIGH); }
-void stopStep2()  { Serial.println("Mematikan relay2"); digitalWrite(relay2, HIGH); }
+void startStep2() { Serial.println("Menyalakan relay2"); for (pos = 70; pos <= 125; pos += 1) {
+        myServo.write(pos);
+        delay(10);
+      } }
+void startStep3() { Serial.println("Menyalakan relay3"); digitalWrite(relay2, LOW); }
+void stopStep1()  { Serial.println("Mematikan relay3"); digitalWrite(relay2, HIGH); }
+void stopStep2()  { Serial.println("Mematikan relay2"); for (pos = 125; pos >= 70; pos -= 1) {
+      myServo.write(pos);
+      delay(10);
+    } }
 void stopStep3()  { Serial.println("Mematikan relay1"); digitalWrite(relay1, HIGH); }
 
 Step startSequence[] = { {startStep1}, {startStep2}, {startStep3} };
@@ -28,13 +39,10 @@ void setup() {
   Serial.println("Starting........");
   pinMode(relay1, OUTPUT);
   pinMode(relay2, OUTPUT);
-  pinMode(relay3, OUTPUT);
-  pinMode(ledPin, OUTPUT);
+  myServo.attach(servo);
 
   digitalWrite(relay1, HIGH);
   digitalWrite(relay2, HIGH);
-  digitalWrite(relay3, HIGH);
-  digitalWrite(ledPin, HIGH);
 }
 
 void loop() {
