@@ -52,7 +52,7 @@ boolean stopping = false;
 const int IR_PIN = 2;
 volatile unsigned int counter = 0;
 unsigned long previousMillis = 0;
-unsigned int rpm = 0;
+volatile unsigned int rpm = 0;
 void Interrupt() {
   counter++;
 }
@@ -182,7 +182,7 @@ void loop() {
   // ------ RPM ------- //
   if (currentMillis - previousMillis >= 1000) {
     previousMillis = currentMillis;
-    rpm = (counter / 2) * 60;
+    rpm = (counter / 3) * 60;
     counter = 0;
   }
   if (rpm >= 120) {
