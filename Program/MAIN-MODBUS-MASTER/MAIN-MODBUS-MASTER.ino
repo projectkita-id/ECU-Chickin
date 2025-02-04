@@ -16,6 +16,7 @@ Servo myServo;
 int servo = 3;
 int pos = 0;
 int varDeg;
+int currentDeg;
 
 // -------------------------------- Relay ------------------------------------- //
 int relay1 = A0;
@@ -58,7 +59,7 @@ void startStep1() {
   digitalWrite(relay1, LOW);
 }
 void startStep2() {
-  for (pos = 70; pos <= 125; pos += 1) {
+  for (pos = 125; pos >= 70; pos -= 1) {
     myServo.write(pos);
     delay(10);
   }
@@ -70,8 +71,8 @@ void startStep4() {
   digitalWrite(relay2, HIGH);
 }
 void stopStep1()  {
-  if (varDeg != 0) {
-    for (pos = varDeg; pos <= 125; pos += 1) {
+  if (currentDeg != 0) {
+    for (pos = currentDeg; pos <= 125; pos += 1) {
       myServo.write(pos);
       delay(50);
     }
@@ -297,10 +298,10 @@ void loop() {
 
   // ----- Check startReg and stopReg ----- //
   if (startReg == 1 && !isRunning && !isStopping && hasStopped && START == false) {
-    Serial.println("Memulai Sequence START...");
     isRunning = true;
     isStopping = false;
     hasStopped = false; // Mencegah start berulang sebelum stop dilakukan
+    currentDeg = 0;
     stepIndex = 0;
     previousMillis = millis();
   }
@@ -310,11 +311,27 @@ void loop() {
 
   varDeg = map(mapDeg, 0, 100, 70, 35);
   if (hasStarted == true) {
-    myServo.write(varDeg);
+    if (currentDeg == 0) {
+      for (pos = 70; pos >= varDeg; pos -= 1) {
+        myServo.write(pos);
+        delay(10);
+      }
+      currentDeg = varDeg;
+    } else if (currentDeg < varDeg){
+      for (pos = currentDeg; pos <= varDeg; pos += 1) {
+        myServo.write(pos);
+        delay(10);
+      }
+      currentDeg = varDeg;
+    } else if (currentDeg > varDeg){
+      for (pos = currentDeg; pos >= varDeg; pos -= 1) {
+        myServo.write(pos);
+        delay(10);
+      }
+    }
   }
 
   if (stopReg == 1 && !isStopping && !isRunning && STOP == false) {
-    Serial.println("Memulai Sequence STOP...");
     isRunning = false;
     isStopping = true;
     stepIndex = 0;
