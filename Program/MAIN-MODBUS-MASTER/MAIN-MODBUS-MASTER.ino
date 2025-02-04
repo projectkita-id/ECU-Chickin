@@ -346,7 +346,7 @@ void loop() {
       previousMillis = millis();
       startSequence[stepIndex].action();
       stepIndex++;
-      if (stepIndex >= 3) {
+      if (stepIndex >= 4) {
         isRunning = false;
         START = true;
         hasStarted = true;
@@ -358,7 +358,7 @@ void loop() {
       previousMillis = millis();
       stopSequence[stepIndex].action();
       stepIndex++;
-      if (stepIndex >= 3) {
+      if (stepIndex >= 2) {
         isStopping = false;
         hasStopped = true;
         hasStarted = false;
