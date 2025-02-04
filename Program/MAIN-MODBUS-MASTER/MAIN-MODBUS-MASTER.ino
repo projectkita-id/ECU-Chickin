@@ -50,7 +50,7 @@ bool START = false;
 bool STOP = false;
 bool hasStarted = false;
 int failCounter;
-const unsigned long stepDelay = 3000;  // Jeda antar step (2 detik)
+const unsigned long stepDelay = 3000;  // Jeda antar step (3 detik)
 int stepIndex = 0;
 struct Step {
   void (*action)();
@@ -341,7 +341,7 @@ void loop() {
     STOP = false;
   }
 
-  if (isRunning && stepIndex < 3) {
+  if (isRunning && stepIndex < 4) {
     if (millis() - previousMillis >= stepDelay) {
       previousMillis = millis();
       startSequence[stepIndex].action();
@@ -353,7 +353,7 @@ void loop() {
       }
     }
   }
-  if (isStopping && stepIndex < 3) {
+  if (isStopping && stepIndex < 2) {
     if (millis() - previousMillis >= stepDelay) {
       previousMillis = millis();
       stopSequence[stepIndex].action();
