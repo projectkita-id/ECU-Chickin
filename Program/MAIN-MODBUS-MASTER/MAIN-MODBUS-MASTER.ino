@@ -47,42 +47,47 @@ bool isStopping = false;
 bool hasStopped = true;
 bool START = false;
 bool STOP = false;
-const unsigned long stepDelay = 2000;  // Jeda antar step (2 detik)
+bool hasStarted = false;
+int failCounter;
+const unsigned long stepDelay = 3000;  // Jeda antar step (2 detik)
 int stepIndex = 0;
 struct Step {
   void (*action)();
 };
 void startStep1() {
-  Serial.println("Menyalakan relay1");
   digitalWrite(relay1, LOW);
 }
 void startStep2() {
-  Serial.println("Menyalakan servo"); for (pos = 70; pos <= 125; pos += 1) {
+  for (pos = 70; pos <= 125; pos += 1) {
     myServo.write(pos);
     delay(10);
   }
 }
 void startStep3() {
-  Serial.println("Menyalakan relay2");
   digitalWrite(relay2, LOW);
 }
-void stopStep1()  {
-  Serial.println("Mematikan relay2");
+void startStep4() {
   digitalWrite(relay2, HIGH);
 }
-void stopStep2()  {
-  Serial.println("Mematikan servo"); for (pos = 125; pos >= 70; pos -= 1) {
-    myServo.write(pos);
-    delay(10);
+void stopStep1()  {
+  if (varDeg != 0) {
+    for (pos = varDeg; pos <= 125; pos += 1) {
+      myServo.write(pos);
+      delay(50);
+    }
+  } else {
+    for (pos = 70; pos <= 125; pos += 1) {
+      myServo.write(pos);
+      delay(50);
+    }
   }
 }
-void stopStep3()  {
-  Serial.println("Mematikan relay1");
+void stopStep2()  {
   digitalWrite(relay1, HIGH);
 }
 
-Step startSequence[] = { {startStep1}, {startStep2}, {startStep3} };
-Step stopSequence[]  = { {stopStep1}, {stopStep2}, {stopStep3} };
+Step startSequence[] = { {startStep1}, {startStep2}, {startStep3}, {startStep4} };
+Step stopSequence[]  = { {stopStep1}, {stopStep2}};
 
 // ------------------------------ RPM Sensor ---------------------------------- //
 const int IR_PIN = 2;
@@ -304,7 +309,7 @@ void loop() {
   }
 
   varDeg = map(mapDeg, 0, 100, 70, 35);
-  if (!isStopping) {
+  if (hasStarted == true) {
     myServo.write(varDeg);
   }
 
@@ -327,6 +332,7 @@ void loop() {
       if (stepIndex >= 3) {
         isRunning = false;
         START = true;
+        hasStarted = true;
       }
     }
   }
@@ -338,6 +344,7 @@ void loop() {
       if (stepIndex >= 3) {
         isStopping = false;
         hasStopped = true;
+        hasStarted = false;
         STOP = true;
       }
     }
