@@ -8,7 +8,6 @@
 #include <LiquidCrystal_I2C.h>
 
 // ----------------------------- Fuel Sensor ---------------------------------- //
-int TankValue;
 const uint8_t fuelPin = A7;
 
 // -------------------------------- Servo ------------------------------------- //
@@ -50,7 +49,7 @@ bool START = false;
 bool STOP = false;
 bool hasStarted = false;
 int failCounter;
-const unsigned long stepDelay = 3000;  // Jeda antar step (3 detik)
+const unsigned long stepDelay = 3000;  // Jeda antar step (2 detik)
 int stepIndex = 0;
 struct Step {
   void (*action)();
@@ -224,7 +223,7 @@ void loop() {
   // ------ RPM ------- //
   if (currentMillis - previousMillis >= 1000) {
     previousMillis = currentMillis;
-    rpm = (counter / 2) * 60;
+    rpm = (counter / 3) * 60;
     counter = 0;
   }
   if (rpm >= 120) {
@@ -309,22 +308,22 @@ void loop() {
     START = false;
   }
 
-  varDeg = map(mapDeg, 0, 100, 70, 35);
+  varDeg = map(mapDeg, 0, 100, 69, 35);
   if (hasStarted == true) {
     if (currentDeg == 0) {
-      for (pos = 70; pos >= varDeg; pos -= 1) {
+      for (pos = 70; pos <= varDeg; pos -= 1) {
         myServo.write(pos);
         delay(10);
       }
       currentDeg = varDeg;
     } else if (currentDeg < varDeg){
-      for (pos = currentDeg; pos <= varDeg; pos += 1) {
+      for (pos = currentDeg; pos >= varDeg; pos += 1) {
         myServo.write(pos);
         delay(10);
       }
       currentDeg = varDeg;
     } else if (currentDeg > varDeg){
-      for (pos = currentDeg; pos >= varDeg; pos -= 1) {
+      for (pos = currentDeg; pos <= varDeg; pos -= 1) {
         myServo.write(pos);
         delay(10);
       }
@@ -341,7 +340,7 @@ void loop() {
     STOP = false;
   }
 
-  if (isRunning && stepIndex < 4) {
+  if (isRunning && stepIndex < 3) {
     if (millis() - previousMillis >= stepDelay) {
       previousMillis = millis();
       startSequence[stepIndex].action();
@@ -353,7 +352,7 @@ void loop() {
       }
     }
   }
-  if (isStopping && stepIndex < 2) {
+  if (isStopping && stepIndex < 3) {
     if (millis() - previousMillis >= stepDelay) {
       previousMillis = millis();
       stopSequence[stepIndex].action();
